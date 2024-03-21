@@ -64,8 +64,6 @@ def etag(filePath):
     """
     with open(filePath, 'rb') as f:
         return etag_stream(f)
-    
-
 
 
 def tensor2pil(image):
@@ -152,7 +150,7 @@ class Image_Filters:
             tensors.append(img)
 
         return (tensors, )
-    
+
 
 class LoadUrlImage:
     def __init__(self) -> None:
@@ -235,7 +233,7 @@ class LoadUrlImage:
             output_mask = output_masks[0]
 
         return (output_image, output_mask)
-        
+
 
 class SaveNamedImage:
     def __init__(self):
@@ -244,15 +242,16 @@ class SaveNamedImage:
 
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": 
-                    {
-                        "images": ("IMAGE", ),
-                        "filename_prefix": ("STRING", {"default": "ComfyUI"}),
-                        "filename_suffix":  ("STRING", {"default": ".png"}),
-                        "callback_url": ("STRING", {"default": ""}),
-                        "timeout": ("INT", {"default": 5}),
-                        },
-                }
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+                "filename_suffix": ("STRING", {"default": ".png"}),
+                "callback_url": ("STRING", {"default": ""}),
+                "generate_id": ("STRING", {"default": "-1"}),
+                "timeout": ("INT", {"default": 5}),
+            },
+        }
 
     RETURN_TYPES = ()
     FUNCTION = "run_it"
@@ -261,42 +260,63 @@ class SaveNamedImage:
 
     CATEGORY = "biubiubiu/Image"
 
-    def callback(self, url, timeout):
+    def callback(self, url, timeout, results):
         try:
-            requests.post(url=url, timeout=timeout)
+            requests.post(url=url, json=results, timeout=timeout)
         except Exception as e:
             print(e)
 
-    def run_it(self, images, filename_prefix="ComfyUI", filename_suffix='.png', callback_url="", timeout=5):
-        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+    def run_it(
+        self,
+        images,
+        filename_prefix="ComfyUI",
+        filename_suffix=".png",
+        callback_url="",
+        timeout=5,
+        generate_id="",
+    ):
+        full_output_folder, filename, counter, subfolder, filename_prefix = (
+            folder_paths.get_save_image_path(
+                filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0]
+            )
+        )
+
         results = list()
-        for (batch_number, image) in enumerate(images):
-            i = 255. * image.cpu().numpy()
-            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))            
+        for batch_number, image in enumerate(images):
+            i = 255.0 * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             filename_with_batch_num = filename.replace("%batch_num%", str(batch_number))
-
             file = f"{filename_with_batch_num}_{counter:05}_{filename_suffix}"
             file_path = os.path.join(full_output_folder, file)
             img.save(file_path)
-            results.append({
-                "filename": file,
-                "subfolder": subfolder,
-                "type": self.type
-            })
+
+            results.append(
+                {
+                    "filename": file,
+                    "subfolder": subfolder,
+                    "type": self.type,
+                    "generate_id": generate_id,
+                }
+            )
             counter += 1
+
         if callback_url != "":
-            self.callback(callback_url,timeout)
+            self.callback(callback_url, timeout, results)
 
-        return { "ui": { "images": results } }
+        return {"ui": {"images": results}}
 
-        
+
 class RepeatMaskBatch:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": { "samples": ("MASK",),
-                              "amount": ("INT", {"default": 1, "min": 1, "max": 64}),
-                              }}
+        return {
+            "required": {
+                "samples": ("MASK",),
+                "amount": ("INT", {"default": 1, "min": 1, "max": 64}),
+            }
+        }
+
     RETURN_TYPES = ("MASK",)
     FUNCTION = "repeat"
 
@@ -306,6 +326,7 @@ class RepeatMaskBatch:
         s = samples.clone()
         s = torch.concat([s]*amount, dim=0)
         return (s,)
+
 
 class RepeatBBoxDetailBatch:
     @classmethod
