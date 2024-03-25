@@ -7,6 +7,7 @@ from .faceskin import FaceSkinSegmentation, FaceSkinPaste
 from .face_kps import FaceKeypointsSwapper
 from .sample import KSamplerHires
 from .input_node import PipeInputN1
+from .preprocess import OpenPose_Preprocessor, PrepImageForFace, FaceCrop
 
 
 dir = os.path.dirname(__file__)
@@ -35,7 +36,10 @@ NODE_CLASS_MAPPINGS= {
     "RepeatMaskBatch": RepeatMaskBatch,
     "ColorFix": ColorFix,
     "KSamplerHires": KSamplerHires, 
-    "PipeInputN1": PipeInputN1
+    "PipeInputN1": PipeInputN1,
+    "PosePreprocessor": OpenPose_Preprocessor,
+    "PrepImageForFace": PrepImageForFace,
+    "FaceCrop": FaceCrop
 }
 
 
@@ -52,6 +56,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "RepeatMaskBatch": "Repeat Mask Batch",
     "ColorFix": "Color Fix",
     "KSamplerHires": "KSampler Hires",
-    "PipeInputN1": "PipeInputN1"
+    "PipeInputN1": "PipeInputN1",
+    "PosePreprocessor": "Pose Preprocessor",
+    "PrepImageForFace": "PrepImageForFace",
+    "FaceCrop": "Face Crop"
+
 }
 

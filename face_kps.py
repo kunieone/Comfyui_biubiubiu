@@ -100,15 +100,17 @@ class FaceKeypointsSwapper:
                 "faceanalysis": ("FACEANALYSIS", ),
                 "image_src": ("IMAGE", ),
                 "image_template": ("IMAGE", ),
-                "keep_nose": ("BOOLEAN", {"default": False})
+                "is_swapper": ("BOOLEAN", {"default": False})
             },
         }
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "run_it"
     CATEGORY = "biubiubiu/KPS"
 
-    def run_it(self, faceanalysis, image_src, image_template, keep_nose=False):
-        face_kps = extractFeatures(faceanalysis, image_src[0].unsqueeze(0), template_image=image_template, keep_nose=keep_nose)
+    def run_it(self, faceanalysis, image_src, image_template, is_swapper=False):
+        if not is_swapper:
+            return (image_template,)
+        face_kps = extractFeatures(faceanalysis, image_src[0].unsqueeze(0), template_image=image_template, keep_nose=False)
 
         if face_kps is None:
             face_kps = torch.zeros_like(image_src)
