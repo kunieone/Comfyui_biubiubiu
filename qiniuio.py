@@ -118,6 +118,13 @@ def list_output_image(filename_prefix, filename_suffix):
     return fns
 
 
+def list_input_image(filename_prefix, filename_suffix):
+    output_dir = folder_paths.get_input_directory()
+    fns = glob.glob(os.path.join(output_dir, filename_prefix, '*'+filename_suffix))
+    fns = [f.replace(output_dir + '/', "") for f in fns if os.path.isfile(f)]
+    return fns
+
+
 @PromptServer.instance.routes.post("/imageio/upload_image_from_qiniu")
 async def download_image_from_qiniu(request):
     print(request)
@@ -131,13 +138,28 @@ async def download_image_from_qiniu(request):
         prefix = request.rel_url.query["prefix"]
     else:
         prefix = ''
-    
+
     if "suffix" in request.rel_url.query:
         suffix = request.rel_url.query["suffix"]
     else:
         suffix = ''
     fns = list_output_image(prefix, suffix)
     return web.json_response({"names" : fns, })
+
+@PromptServer.instance.routes.get("/imageio/list_input_image")
+async def download_image_from_qiniu(request):
+    if "prefix" in request.rel_url.query:
+        prefix = request.rel_url.query["prefix"]
+    else:
+        prefix = ''
+
+    if "suffix" in request.rel_url.query:
+        suffix = request.rel_url.query["suffix"]
+    else:
+        suffix = ''
+    fns = list_input_image(prefix, suffix)
+    return web.json_response({"names" : fns, })
+
 
 @PromptServer.instance.routes.post("/imageio/download_image_to_qiniu")
 async def download_image_from_qiniu(request):

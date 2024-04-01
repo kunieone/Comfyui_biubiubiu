@@ -1,7 +1,7 @@
 import importlib
 import sys, os
 
-from .tools import CleanPromptNode, Image_Filters, LoadUrlImage, SaveNamedImage, RepeatBBoxDetailBatch, RepeatMaskBatch, ColorFix
+from .tools import CleanPromptNode, Image_Filters, LoadUrlImage, SaveNamedImage, RepeatBBoxDetailBatch, RepeatMaskBatch, ColorFix,EmptyLatentImageLongside, FacePaste
 from .segmentation import FaceSegment
 from .faceskin import FaceSkinSegmentation, FaceSkinPaste
 from .face_kps import FaceKeypointsSwapper
@@ -39,7 +39,9 @@ NODE_CLASS_MAPPINGS= {
     "PipeInputN1": PipeInputN1,
     "PosePreprocessor": OpenPose_Preprocessor,
     "PrepImageForFace": PrepImageForFace,
-    "FaceCrop": FaceCrop
+    "FaceCrop": FaceCrop,
+    "EmptyLatentImageLongside": EmptyLatentImageLongside,
+    "FacePaste": FacePaste
 }
 
 
@@ -59,7 +61,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PipeInputN1": "PipeInputN1",
     "PosePreprocessor": "Pose Preprocessor",
     "PrepImageForFace": "PrepImageForFace",
-    "FaceCrop": "Face Crop"
+    "FaceCrop": "Face Crop",
+    "EmptyLatentImageLongside": "Empty Latent Longside",
+    "FacePaste": "Face Paste"
 
 }
 

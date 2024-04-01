@@ -2,11 +2,14 @@ import re
 import os
 import torch
 import cv2
+import piexif
+import json
 import numpy as np
 from PIL import Image, ImageSequence, ImageOps
 import torchvision.transforms.functional as F
 from collections import namedtuple
 import folder_paths
+import comfy.model_management
 from io import BytesIO
 import requests
 import time
@@ -245,6 +248,7 @@ class SaveNamedImage:
         return {
             "required": {
                 "images": ("IMAGE",),
+                "seed": ("INT", {"default": -1}),
                 "filename_prefix": ("STRING", {"default": "ComfyUI"}),
                 "filename_suffix": ("STRING", {"default": ".png"}),
                 "callback_url": ("STRING", {"default": ""}),
@@ -269,6 +273,7 @@ class SaveNamedImage:
     def run_it(
         self,
         images,
+        seed,
         filename_prefix="ComfyUI",
         filename_suffix=".png",
         callback_url="",
@@ -286,10 +291,21 @@ class SaveNamedImage:
             i = 255.0 * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
+
             filename_with_batch_num = filename.replace("%batch_num%", str(batch_number))
             file = f"{filename_with_batch_num}_{counter:05}_{filename_suffix}"
             file_path = os.path.join(full_output_folder, file)
-            img.save(file_path)
+            custom_exif = {}
+            if seed != -1:
+                custom_exif['seed'] = seed
+            custom_exif_json = json.dumps(custom_exif)
+            exif_dict = {}
+            exif_ifd = {piexif.ExifIFD.UserComment: custom_exif_json.encode()}
+            exif_dict = {"0th": {}, "Exif": exif_ifd, "1st": {},
+                    "thumbnail": None, "GPS": {}}
+            exif_bytes = piexif.dump(exif_dict)
+
+            img.save(file_path, exif=exif_bytes)
 
             results.append(
                 {
@@ -403,3 +419,71 @@ class ColorFix:
             tensors.append(torch.from_numpy(shift_image)[None,...])
         tensors = torch.concat(tensors, dim=0).float()/255
         return (tensors,)
+
+
+
+class EmptyLatentImageLongside:
+    def __init__(self):
+        self.device = comfy.model_management.intermediate_device()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": { 
+            "width": ("INT", {"default": 512, "min": 16, "max": 8192, "step": 8}),
+            "height": ("INT", {"default": 512, "min": 16, "max": 8192, "step": 8}),
+            "longside": ("INT", {"default": 1440}),
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096})}}
+    RETURN_TYPES = ("LATENT",)
+    FUNCTION = "generate"
+
+    CATEGORY = "latent"
+
+    def generate(self, width, height, longside, batch_size=1):
+        longside_this = max(width, height)
+        width = int(longside*(width/longside_this)//8)
+        height = int(longside*(height/longside_this)//8)
+
+        latent = torch.zeros([batch_size, 4, height, width], device=self.device)
+        return ({"samples":latent}, )
+
+
+class FacePaste:
+    def __init__(self) -> None:
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "image_croped": ("IMAGE",),
+                "bbox_detail": ("BBOXDETAIL",),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image")
+
+    FUNCTION = "run_it"
+
+    CATEGORY = "biubiubiu/Image"
+
+    def run_it(self, image, image_croped, bbox_detail,):
+        bs = image.shape[0]
+        tensors = []
+        for i in range(bs):
+            img = image[i].cpu().numpy()
+            img_copy = np.copy(img)
+            img_croped = image_croped[i].cpu().numpy()
+            
+            bbox = bbox_detail[i]
+
+            paste = cv2.resize(img_croped, (bbox[3]-bbox[1], bbox[2]-bbox[0]))
+            img_copy[bbox[1]:bbox[3], bbox[0]:bbox[2]] = paste
+
+            tensors.append(torch.from_numpy(img_copy)[None,...])
+
+
+        tensors = torch.concat(tensors, dim=0)
+        return (tensors,)
+    

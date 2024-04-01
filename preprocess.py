@@ -43,9 +43,9 @@ class OpenPose_Preprocessor:
         self.openpose_dicts = []
         def func(image, **kwargs):
             pose_img, openpose_dict = self.model(image, **kwargs)
+
             self.openpose_dicts.append(openpose_dict)
             return pose_img
-        
         out = common_annotator_call(func, image, include_hand=detect_hand, include_face=detect_face, include_body=detect_body, image_and_json=True, resolution=resolution)
         # del model
         return {
